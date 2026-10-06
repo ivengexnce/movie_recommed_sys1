@@ -5,21 +5,21 @@ import 'screens/home_screen.dart';
 import 'services/firebase_storage_service.dart';
 import 'theme/app_theme.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase with project credentials (movie-recommendation-sys-c374e)
-  try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-    FirebaseStorageService().markInitialized(true);
-    debugPrint('Firebase initialized successfully with project credentials.');
-  } catch (e) {
-    debugPrint('Firebase initialization fallback: $e');
-  }
-
+  // Boot the UI immediately without blocking on network handshakes
   runApp(const CineMatchApp());
+
+  // Initialize Firebase in the background
+  Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  ).then((_) {
+    FirebaseStorageService().markInitialized(true);
+    debugPrint('Firebase initialized in background.');
+  }).catchError((e) {
+    debugPrint('Firebase background init fallback: $e');
+  });
 }
 
 class CineMatchApp extends StatelessWidget {

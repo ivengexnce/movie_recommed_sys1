@@ -46,7 +46,17 @@ class _HomeScreenState extends State<HomeScreen>
     _tabController = TabController(length: 3, vsync: this)..addListener(() {
       if (mounted) setState(() {});
     });
-    _checkServerAndFetch();
+
+    // 1. Immediately populate from in-memory cache if available (0ms delay)
+    _recommendations = _apiService.getImmediateRecommendations(
+      mood: _selectedMood,
+      genre: _selectedGenre,
+      limit: 12,
+    );
+    _catalogMovies = _apiService.getImmediateCatalog(limit: 50);
+
+    // 2. Fetch fresh data concurrently in background
+    _fetchConcurrently();
   }
 
   @override
@@ -56,17 +66,18 @@ class _HomeScreenState extends State<HomeScreen>
     super.dispose();
   }
 
-  Future<void> _checkServerAndFetch() async {
-    final health = await _apiService.checkHealth();
-    if (mounted) {
-      setState(() => _isServerOnline = health['is_remote'] == true);
-      _fetchRecommendations();
-      _fetchCatalog();
-    }
+  void _fetchConcurrently() {
+    _fetchRecommendations();
+    _fetchCatalog();
+    _apiService.checkHealth().then((health) {
+      if (mounted) setState(() => _isServerOnline = health['is_remote'] == true);
+    });
   }
 
   Future<void> _fetchRecommendations() async {
-    setState(() => _isLoadingRecs = true);
+    if (_recommendations.isEmpty) {
+      setState(() => _isLoadingRecs = true);
+    }
     try {
       final recs = await _apiService.getRecommendations(
         mood: _selectedMood,
@@ -80,13 +91,15 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Future<void> _fetchCatalog() async {
-    setState(() => _isLoadingCatalog = true);
+    if (_catalogMovies.isEmpty) {
+      setState(() => _isLoadingCatalog = true);
+    }
     try {
       final movies = await _apiService.getMovies(
         search: _catalogSearch,
         genre: 'All',
         minRating: _minRating > 0 ? _minRating : null,
-        limit: 100,
+        limit: 50,
       );
       if (mounted) {
         final sorted = List<Movie>.from(movies);
@@ -105,7 +118,7 @@ class _HomeScreenState extends State<HomeScreen>
       context,
       MaterialPageRoute(builder: (_) => MovieDetailScreen(movie: movie)),
     );
-    if (refreshed == true) _checkServerAndFetch();
+    if (refreshed == true) _fetchConcurrently();
   }
 
   void _triggerSurpriseMe() {
@@ -245,7 +258,7 @@ class _HomeScreenState extends State<HomeScreen>
             style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
             onPressed: () async {
               final added = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => const AddMovieScreen()));
-              if (added == true) _checkServerAndFetch();
+              if (added == true) _fetchConcurrently();
             },
             child: const Text('+ ADD MOVIE'),
           ),
@@ -256,7 +269,7 @@ class _HomeScreenState extends State<HomeScreen>
             icon: const Icon(Icons.tune, size: 18),
             onPressed: () async {
               await Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
-              _checkServerAndFetch();
+              _fetchConcurrently();
             },
           ),
           const SizedBox(width: 12),

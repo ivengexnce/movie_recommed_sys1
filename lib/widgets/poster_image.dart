@@ -36,6 +36,8 @@ class PosterImage extends StatelessWidget {
                 url,
                 width: width,
                 height: height,
+                cacheWidth: 320,
+                filterQuality: FilterQuality.low,
                 fit: fit,
                 loadingBuilder: (_, child, prog) => prog == null ? child : _buildFallback(isLoading: true),
                 errorBuilder: (context, error, stackTrace) => _buildFallback(isLoading: false),
