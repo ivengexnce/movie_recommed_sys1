@@ -137,6 +137,34 @@
     </div>
   </div>
 
+  <script>
+    function removeSplash() {
+      var splash = document.getElementById('loading-splash');
+      if (splash && splash.style.display !== 'none') {
+        splash.style.opacity = '0';
+        splash.style.pointerEvents = 'none';
+        setTimeout(function() {
+          if (splash && splash.parentNode) {
+            splash.parentNode.removeChild(splash);
+          }
+        }, 400);
+      }
+    }
+
+    window.addEventListener('flutter-first-frame', function () {
+      removeSplash();
+    });
+
+    var observer = new MutationObserver(function(mutations, obs) {
+      if (document.querySelector('flutter-view') || document.querySelector('flt-glass-pane')) {
+        setTimeout(removeSplash, 300);
+        obs.disconnect();
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    setTimeout(removeSplash, 3500);
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

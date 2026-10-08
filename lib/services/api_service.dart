@@ -27,10 +27,17 @@ class ApiService {
   // Local in-memory cache populated from asset seed
   List<Movie> _localCatalog = [];
   bool _localLoaded = false;
+  Future<void>? _loadingFuture;
   final Map<String, List<Movie>> _recsCache = {};
 
   Future<void> _ensureLocalLoaded() async {
     if (_localLoaded && _localCatalog.isNotEmpty) return;
+    if (_loadingFuture != null) return _loadingFuture!;
+    _loadingFuture = _loadSeed();
+    return _loadingFuture!;
+  }
+
+  Future<void> _loadSeed() async {
     try {
       final jsonStr = await rootBundle.loadString('assets/data/movies_seed.json');
       final List<dynamic> decoded = json.decode(jsonStr);
